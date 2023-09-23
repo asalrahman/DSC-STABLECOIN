@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {Dsc} from "./Dsc.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
+import {IERC20}"@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /*
 -1 Token == $1 peg
@@ -13,16 +13,25 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 based on MakerDAO(DAI)
 
 */
-contract DscEngine {
+contract DscEngine is ReentrancyGuard,IERC20{
 
    //errors
    error DscEngine_NeedsMorethanZero();
     error  DscEngine__TokenAddressesAndPriceFeedAddressesAmountsDontMatch();
     error DscEngine__TokenNotAllowed(token);
+    error DscEngine__TransferFailed();
+
+     // Events
+  event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
+
+
 
  /// @dev Mapping of token address to price feed address
 
     mapping(address collateralToken => address priceFeed) private s_priceFeeds;
+
+     /// @dev Amount of collateral deposited by user
+    mapping(address user => mapping(address collateralToken => uint256 amount)) private s_collateralDeposited;
 
 
 
@@ -63,12 +72,21 @@ contract DscEngine {
 
   function depositeCollateralAndMintDsc() external {}
 
+
+
   function  deposite(address tokenCollateralAddress,uint256 amountCollateral )external
    moreThanZero(amountCollateral) isAllowed(tokenCollateralAddress) nonReentrant{
     
-
+    s_collateralDeposited[msg.sender][tokenCollateralAddress]+=amountCollateral; //updating state
+    emit CollateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
+     bool success = IERC20(tokenCollateralAddress).transferFrom(msg.sender,address(this),amountCollateral);
+     if(!success ){
+      revert DscEngine__TransferFailed();
+     }
 
   }
+
+
 
   function redeemCollateralForDsc()external {}
 
