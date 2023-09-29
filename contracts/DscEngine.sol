@@ -32,7 +32,8 @@ contract DscEngine is ReentrancyGuard,IERC20{
 
      /// @dev Amount of collateral deposited by user
     mapping(address user => mapping(address collateralToken => uint256 amount)) private s_collateralDeposited;
-
+     //user to amount minted
+     mapping(address user => uint256 amount) private s_DscMinted;
 
 
    //modifiers
@@ -74,7 +75,7 @@ contract DscEngine is ReentrancyGuard,IERC20{
 
 
 
-  function  deposite(address tokenCollateralAddress,uint256 amountCollateral )external
+  function  deposite(address tokenCollateralAddress,uint256 amountCollateral ) public
    moreThanZero(amountCollateral) isAllowed(tokenCollateralAddress) nonReentrant{
     
     s_collateralDeposited[msg.sender][tokenCollateralAddress]+=amountCollateral; //updating state
@@ -86,6 +87,33 @@ contract DscEngine is ReentrancyGuard,IERC20{
 
   }
 
+  function mintDsc(uint256 amountDscToMint)public moreThanZero(amountDscToMint) nonReentrant{
+    
+    s_DscMinted[msg.sender]+=amountDscToMint;
+     revertIfHealthFactorIsBroken(msg.sender);
+
+  }
+
+
+// view funtions 
+
+  function _getAccountInfo(address user) private view returns(uint256 totalDscMinted,
+  uint256 totalCollateralValueInUsd){
+      
+      totalDscMinted= s_DscMinted[user]
+
+  }
+
+  function _healthfactor(address user) private view returns (uint256) {
+    //total dsc minted 
+    // total collateral Value
+    (uint256 totalDscMinted,uint256 totalCollateralValueInUsd) = _getAccountInfo(user);
+  }
+
+  function revertIfHealthFactorIsBroken(address user)   internal view {
+    // check healthfactor 
+    // revert not enough health factor
+  }
 
 
   function redeemCollateralForDsc()external {}
