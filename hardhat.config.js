@@ -39,7 +39,7 @@ networks:{
   }
 },
   
-solidity: {version:"0.8.7"},
+solidity: {version:"0.8.19"},
   gasReporter: {
     enabled:false,
     outputFile:"gasReporter.txt",
