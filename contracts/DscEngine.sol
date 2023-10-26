@@ -7,9 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /*
--1 Token == $1 peg
--Exogenous collateral
--Algorimitically stable
+- 1 Token == $1 peg
+- Exogenous collateral
+- Algorimitically stable
 
 based on MakerDAO(DAI)
 
@@ -26,6 +26,7 @@ contract DscEngine is ReentrancyGuard{
 
      // Events
   event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
+  event CollateralRedemed(address indexed user, address indexed token, uint256 indexed amount);
 
 //state Variables 
     uint256 private constant PRECISION = 1e18;
@@ -79,8 +80,19 @@ contract DscEngine is ReentrancyGuard{
   
 
 
+//tokenCollateralAddress is the address of the collateral token you are depositing 
+//amountCollateral the  amount you are depositing 
+//amountDscToMint to get the dsc token
+//deposite and mint dsc in one section
+  function depositeCollateralAndMintDsc(
+    address tokenCollateralAddress,
+  uint256 amountCollateral,
+  uint256 amountDscToMint) external {
+   
+   deposite(tokenCollateralAddress,amountCollateral);
+   mintDsc(amountDscToMint);
 
-  function depositeCollateralAndMintDsc() external {}
+  }
 
 
 
@@ -108,6 +120,48 @@ contract DscEngine is ReentrancyGuard{
   }
 
 
+
+
+  function redeemCollateralForDsc(address tokenCollateralAddress,
+  uint256 amountCollateral,
+  uint256 amountDscToBurn
+             )external {
+     
+     burnDsc(amountDscToBurn);
+     redemmCollateral(tokenCollateralAddress,amountCollateral);
+
+
+  }
+
+  function  redemmCollateral(address tokenCollateralAddress
+  ,uint256 amountCollateral
+   ) moreThanZero(amountCollateral) nonReentrant public  {
+    s_collateralDeposited[msg.sender][tokenCollateralAddress] -= amountCollateral; //pull from state
+     emit CollateralRedemed(msg.sender, tokenCollateralAddress,amountCollateral);
+     bool success = IERC20(tokenCollateralAddress).transfer(msg.sender,amountCollateral);
+     if(!success){
+      revert DscEngine__TransferFailed();
+     }
+
+
+  }
+
+  function burnDsc(uint256 amount) moreThanZero(amount) public{
+    s_DscMinted[msg.sender]-=amount;
+    bool success = i_dsc.transferFrom(msg.sender,address(this),amount);
+    if (!success){
+      revert DscEngine__TransferFailed();
+
+    }
+    i_dsc.burn(amount);
+  }
+
+  function Liquidation() external {}
+
+  function getHealfactor() external {}
+
+
+  
 // view funtions 
 
   function _getAccountInfo(address user) private view returns(uint256 totalDscMinted,
@@ -138,15 +192,6 @@ contract DscEngine is ReentrancyGuard{
       revert DscEngine__BreaksHealthFactor(healthfactor);
     }
   }
-
-
-  function redeemCollateralForDsc()external {}
-
-  function burnDsc() external{}
-
-  function Liquidation() external {}
-
-  function getHealfactor() external {}
 
  // External & Public View & Pure Functions
 
